@@ -1,7 +1,8 @@
 module.exports = function CommandSerializer() {
   var inCmd = false,
       queuedErr = null,
-      cmdQueue = [];
+      cmdQueue = [],
+      cleanupAfterError = function(err, cb) { cb(); };
 
   function executeNextCmd() {
     if (inCmd !== true)
@@ -31,8 +32,15 @@ module.exports = function CommandSerializer() {
 
       if (typeof(cb) == 'function') {
         args[args.length-1] = function(err, result) {
-          process.nextTick(executeNextCmd);
-          cb.call(self, err, result);
+          function go() {
+            process.nextTick(executeNextCmd);
+            cb.call(self, err, result);
+          }
+
+          if (err)
+            cleanupAfterError(err, go);
+          else
+            go();
         };
       } else
         args.push(function(err, result) {
@@ -51,6 +59,9 @@ module.exports = function CommandSerializer() {
   
   return {
     queue: cmdQueue,
-    serialized: makeSerializedCmd
+    serialized: makeSerializedCmd,
+    setCleanupHandler: function(handler) {
+      cleanupAfterError = handler;
+    }
   };
 };

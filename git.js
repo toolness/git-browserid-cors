@@ -119,6 +119,14 @@ function Git(options) {
     }
   };
   
+  cs.setCleanupHandler(function(err, cb) {
+    commands.reset(function(err) {
+      if (err)
+        console.warn('cleanup failed: ' + err);
+      cb();
+    });
+  });
+  
   Object.keys(commands).forEach(function(name) {
     self[name] = cs.serialized(function() {
       return commands[name].apply(commands, arguments);

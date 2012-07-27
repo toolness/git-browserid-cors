@@ -23,6 +23,32 @@ describe("CommandSerializer", function() {
     });
   });
   
+  it("should cleanup after errors occur", function(done) {
+    var cs = CommandSerializer();
+    var log = [];
+    var self = {
+      a: cs.serialized(function(err, cb) {
+        log.push("a(" + err + "):" + cs.queue.length);
+        setTimeout(function() { cb(err); });
+      })
+    };
+
+    cs.setCleanupHandler(function cleanup(err, cb) {
+      log.push("cleanup " + err);
+      cb();
+    });
+    self.a(null, function(err) {
+      expect(err).to.be(null);
+      expect(log).to.eql(['a(null):2']);
+    })
+    .a("err1")
+    .a(null, function(err) {
+      expect(err).to.be("err1");
+      expect(log).to.eql(['a(null):2', 'a(err1):1', 'cleanup err1']);
+      done();
+    });
+  });
+  
   it("should propagate errors", function(done) {
     var cs = CommandSerializer();
     var self = {

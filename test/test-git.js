@@ -30,6 +30,21 @@ describe('Git', function() {
   
   afterEach(nukeRootDir);
   
+  it('should clean up on unexpected failure', function(done) {
+    fs.writeFileSync(git.abspath('untracked.txt'), 'hello');
+    git.init()
+       .addFile('blah.txt', 'hello')
+       .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+       .addFile('blah.txt', 'supdog')
+       .add('moose.txt', function(err) {
+         expect(err.stderr).to.be('fatal: pathspec \'moose.txt\' did not ' +
+                                  'match any files\n');
+         expect(fs.existsSync(git.abspath('untracked.txt'))).to.be(false);
+         expect(contentsOf('blah.txt')).to.be('hello');
+         done();
+       });
+  });
+  
   it('should initialize repositories', function(done) {
     git.init(function(err) {
       expect(err).to.be(null);
