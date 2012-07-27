@@ -38,6 +38,35 @@ describe('Git', function() {
     });
   });
   
+  it('should rollback uncommitted changes', function(done) {
+    git.init()
+      .addFile('blah.txt', 'hello there')
+      .commit({
+        author: 'Foo <foo@foo.org>',
+        message: 'origination.'
+      }, function(err) {
+        if (err) return done(err);
+        fs.writeFileSync(git.abspath('blah.txt'), 'changes here!');
+        git.reset(function(err) {
+          if (err) return done(err);
+          expect(contentsOf('blah.txt')).to.be('hello there');
+          done();
+        });
+      })
+  });
+  
+  it('should get rid of untracked files', function(done) {
+    git.init(function(err) {
+      if (err) return done(err);
+      fs.writeFileSync(git.abspath('blah.txt'), 'sup');
+      git.reset(function(err) {
+        if (err) return done(err);
+        expect(fs.existsSync(git.abspath('blah.txt'))).to.be(false);
+        done();
+      });
+    });
+  });
+  
   it('should revert commits', function(done) {
     git.init()
       .addFile('blah.txt', 'hello there')

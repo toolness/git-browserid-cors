@@ -3,27 +3,47 @@ var spawn = require('child_process').spawn,
     fs = require('fs'),
     CommandSerializer = require('./command-serializer');
 
+const NO_HEAD_ERROR = "fatal: Failed to resolve 'HEAD' as a valid ref.\n";
+
 function Git(options) {
   var executable = options.executable || 'git',
       rootDir = options.rootDir,
       debug = options.debug,
       cs = CommandSerializer(),
       self = {};
-  
+
   function git(args, cb) {
-    var cmdline = 'git ' + args.join(' ');
+    var cmdline = 'git ' + args.join(' '),
+        stderr = [],
+        exitCode = undefined,
+        process = spawn(executable, args, {cwd: rootDir});
+
     if (!cb)
       throw new Error('no callback given for: ' + cmdline);
-    var process = spawn(executable, args, {cwd: rootDir});
-    process.stderr.setEncoding('utf8');
+
+    function maybeFinish() {
+      var err = null;
+      if (exitCode !== undefined && typeof(stderr) == 'string') {
+        if (exitCode) {
+          err = new Error('subprocess failed: ' + cmdline +
+                          ' with stderr: ' + JSON.stringify(stderr));
+          err.stderr = stderr;
+          err.exitCode = exitCode;
+        }
+        cb(err);
+      }
+    }
     
-    if (debug)
-      process.stderr.on('data', function(chunk) {
-        console.warn(cmdline + ': ' + chunk);
-      });
+    process.stderr.setEncoding('utf8');
+    process.stderr.on('data', function(chunk) { stderr.push(chunk); });
+    process.stderr.on('end', function() {
+      stderr = stderr.join('');
+      maybeFinish();
+    });
     
     process.on('exit', function(code) {
-      cb(code ? 'subprocess failed: ' + cmdline : null);
+      exitCode = code;
+      maybeFinish();
     });
   }
   
@@ -36,7 +56,14 @@ function Git(options) {
       git(['init'], cb);
     },
     reset: function(cb) {
-      git(['reset', '--hard'], cb);
+      git(['clean', '-f', '-d'], function(err) {
+        if (err) return cb(err);
+        git(['reset', '--hard'], function(err) {
+          if (err && err.stderr == NO_HEAD_ERROR)
+            err = null;
+          cb(err);
+        });
+      });
     },
     commit: function(options, cb) {
       git(['commit', '--author=' + options.author,
@@ -56,7 +83,7 @@ function Git(options) {
       git(['add'].concat(filenames), cb);
     },
     rm: function(filenames, cb) {
-      git(['rm', '-f'].concat(filenames), cb);
+      git(['rm', '-f', '-r'].concat(filenames), cb);
     }
   };
   
