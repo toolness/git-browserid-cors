@@ -5,6 +5,12 @@ var spawn = require('child_process').spawn,
 
 const NO_HEAD_ERROR = "fatal: Failed to resolve 'HEAD' as a valid ref.\n";
 
+function mkpath(path, cb) {
+  spawn('mkdir', ['-p', path]).on('exit', function(code) {
+    cb(code ? 'creating directory at ' + path + ' failed' : null);
+  });
+}
+
 function Git(options) {
   var executable = options.executable || 'git',
       rootDir = options.rootDir,
@@ -90,9 +96,12 @@ function Git(options) {
     },
     addFile: function(filename, data, cb) {
       var self = this;
-      fs.writeFile(abspath(filename), data, function(err) {
+      mkpath(path.dirname(abspath(filename)), function(err) {
         if (err) return cb(err);
-        self.add(filename, cb);
+        fs.writeFile(abspath(filename), data, function(err) {
+          if (err) return cb(err);
+          self.add(filename, cb);
+        });
       });
     },
     add: function(filenames, cb) {
