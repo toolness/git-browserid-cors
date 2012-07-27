@@ -38,6 +38,17 @@ describe('Git', function() {
     });
   });
   
+  it('should list committed files', function(done) {
+    git.init()
+      .addFile('blah.txt', 'hello there')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .listFiles(function(err, files) {
+        if (err) return done(err);
+        expect(files).to.eql(['blah.txt']);
+        done();
+      });
+  });
+  
   it('should remove files', function(done) {
     git.init()
       .addFile('blah.txt', 'hello there')

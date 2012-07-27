@@ -15,6 +15,7 @@ function Git(options) {
   function git(args, cb) {
     var cmdline = 'git ' + args.join(' '),
         stderr = [],
+        stdout = [],
         exitCode = undefined,
         process = spawn(executable, args, {cwd: rootDir});
 
@@ -23,14 +24,17 @@ function Git(options) {
 
     function maybeFinish() {
       var err = null;
-      if (exitCode !== undefined && typeof(stderr) == 'string') {
+      if (exitCode !== undefined &&
+          typeof(stderr) == 'string' &&
+          typeof(stdout) == 'string') {
         if (exitCode) {
           err = new Error('subprocess failed: ' + cmdline +
                           ' with stderr: ' + JSON.stringify(stderr));
           err.stderr = stderr;
+          err.stdout = stdout;
           err.exitCode = exitCode;
         }
-        cb(err);
+        cb(err, stdout);
       }
     }
     
@@ -38,6 +42,13 @@ function Git(options) {
     process.stderr.on('data', function(chunk) { stderr.push(chunk); });
     process.stderr.on('end', function() {
       stderr = stderr.join('');
+      maybeFinish();
+    });
+
+    process.stdout.setEncoding('utf8');
+    process.stdout.on('data', function(chunk) { stdout.push(chunk); });
+    process.stdout.on('end', function() {
+      stdout = stdout.join('');
       maybeFinish();
     });
     
@@ -91,6 +102,11 @@ function Git(options) {
     rm: function(filenames, cb) {
       if (typeof(filenames) == 'string') filenames = [filenames];
       git(['rm', '-f', '-r'].concat(filenames), cb);
+    },
+    listFiles: function(cb) {
+      git(['ls-files'], function(err, stdout) {
+        cb(err, stdout.split('\n').slice(0, -1));
+      });
     }
   };
   
