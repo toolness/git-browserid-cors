@@ -26,8 +26,7 @@ module.exports = function CommandSerializer() {
 
       args[args.length-1] = function cbWrapper(err, result) {
         process.nextTick(executeNextCmd);
-        if (typeof(cb) == 'function')
-          cb.call(self, err, result);
+        cb.call(self, err, result);
       };
       cmdQueue.push({func: func, self: self, args: args});
       if (!inCmd) {
