@@ -38,6 +38,20 @@ describe('Git', function() {
     });
   });
   
+  it('should remove files', function(done) {
+    git.init()
+      .addFile('blah.txt', 'hello there')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .rm('blah.txt')
+      .commit({
+        author: 'Foo <foo@foo.org>',
+        message: 'removed blah.'
+      }, function(err) {
+        expect(fs.existsSync(git.abspath('blah.txt'))).to.be(false);
+        done(err);
+      });
+  });
+  
   it('should rollback uncommitted changes', function(done) {
     git.init()
       .addFile('blah.txt', 'hello there')

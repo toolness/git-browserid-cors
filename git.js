@@ -81,13 +81,15 @@ function Git(options) {
       var self = this;
       fs.writeFile(abspath(filename), data, function(err) {
         if (err) return cb(err);
-        self.add([filename], cb);
+        self.add(filename, cb);
       });
     },
     add: function(filenames, cb) {
+      if (typeof(filenames) == 'string') filenames = [filenames];
       git(['add'].concat(filenames), cb);
     },
     rm: function(filenames, cb) {
+      if (typeof(filenames) == 'string') filenames = [filenames];
       git(['rm', '-f', '-r'].concat(filenames), cb);
     }
   };
