@@ -37,6 +37,7 @@ describe("CommandSerializer", function() {
         .a(null)
         .a(null)
         .a("FAIL")
+        .a(null)
         .a(null, function(err) {
           expect(err).to.be("FAIL");
           expect(self.timesCalled).to.be(4);
