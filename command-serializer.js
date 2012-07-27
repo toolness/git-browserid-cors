@@ -12,19 +12,15 @@ module.exports = function CommandSerializer() {
       inCmd = false;
   }
   
-  function queueCmd(func, self, args, addToFront) {
-    var cmd = {func: func, self: self, args: args};
-    if (addToFront)
-      cmdQueue.splice(0, 0, cmd);
-    else
-      cmdQueue.push(cmd);
+  function queueCmd(func, self, args) {
+    cmdQueue.push({func: func, self: self, args: args});
     if (!inCmd) {
       inCmd = true;
       process.nextTick(executeNextCmd);
     }
   }
   
-  function makeSerializedCmd(func, isImmediate) {
+  function makeSerializedCmd(func) {
     return function() {
       var self = this,
           args = [];
@@ -44,18 +40,13 @@ module.exports = function CommandSerializer() {
       else
         args.push(cbWrapper);
 
-      queueCmd(func, self, args, isImmediate);
+      queueCmd(func, self, args);
       return self;
     };
   }
   
   return {
     queue: cmdQueue,
-    serialized: function(func) {
-      return makeSerializedCmd(func, false);
-    },
-    immediate: function(func) {
-      return makeSerializedCmd(func, true);
-    }
+    serialized: makeSerializedCmd
   };
 };
