@@ -66,8 +66,13 @@ function Git(options) {
       });
     },
     commit: function(options, cb) {
-      git(['commit', '--author=' + options.author,
-           '-m', options.message], cb);
+      git([
+        'commit', '--author=' + options.author,
+        '-m', options.message
+      ], function(err) {
+        if (err) return cb(err);
+        git(['update-server-info'], cb);
+      });
     },
     revert: function(cb) {
       git(['revert', 'HEAD'], cb);
