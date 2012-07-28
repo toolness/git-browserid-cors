@@ -112,8 +112,12 @@ function Git(options) {
       if (typeof(filenames) == 'string') filenames = [filenames];
       git(['rm', '-f', '-r'].concat(filenames), cb);
     },
-    listFiles: function(cb) {
-      git(['ls-files'], function(err, stdout) {
+    listFiles: function(dirname, cb) {
+      if (typeof(dirname) == 'function') {
+        cb = dirname;
+        dirname = '';
+      }
+      git(['ls-files', dirname], function(err, stdout) {
         cb(err, stdout.split('\n').slice(0, -1));
       });
     }

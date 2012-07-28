@@ -63,6 +63,19 @@ describe('Git', function() {
         done();
       });
   });
+
+  it('should list files in specified dirs', function(done) {
+    git.init()
+      .addFile('blah.txt', 'hello there')
+      .addFile('foo/blah.txt', 'hello there')
+      .addFile('foo/bar/blah.txt', 'hello there')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .listFiles('foo', function(err, files) {
+        if (err) return done(err);
+        expect(files).to.eql(['foo/bar/blah.txt', 'foo/blah.txt']);
+        done();
+      });
+  });
   
   it('should create directories as needed', function(done) {
     git.init()
