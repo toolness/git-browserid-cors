@@ -150,4 +150,32 @@ describe('Git', function() {
         });
       });
   });
+  
+  it('should integrate with SimpleGitServer', function(done) {
+    var request = require('supertest');
+    var SimpleGitServer = require('../simple-git-server');
+    var app = SimpleGitServer({git: git});
+
+    git.init(function(err) {
+      if (err) return done(err);
+
+      app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
+        email: 'foo@foo.org',
+        origin: 'http://bar.org'
+      });
+    
+      request(app)
+        .post('/commit')
+        .set('X-Access-Token', 'abcd')
+        .send({
+          add: {
+            'foo.txt': 'blarg'
+          }
+        })
+        .expect(200, function(err) {
+          expect(contentsOf('foo.txt')).to.be('blarg');
+          done(err);
+        });
+    });
+  });
 });
