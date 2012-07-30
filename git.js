@@ -86,10 +86,7 @@ function Git(options) {
       git([
         'commit', '--author=' + options.author,
         '-m', options.message
-      ], function(err) {
-        if (err) return cb(err);
-        git(['update-server-info'], cb);
-      });
+      ], cb);
     },
     revert: function(cb) {
       git(['revert', 'HEAD'], cb);
