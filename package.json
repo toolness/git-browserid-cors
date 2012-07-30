@@ -2,7 +2,7 @@
   "name": "git-browserid-cors",
   "version": "0.0.1",
   "author": "Atul Varma <varmaa@gmail.com>",
-  "description": "BrowserID-authenticated, CORS-enabled REST API for manipulating git repositories",
+  "description": "BrowserID-authenticated, CORS-enabled REST API for manipulating git repositories.",
   "scripts": {
     "test": "node_modules/.bin/mocha -R spec"
   },
