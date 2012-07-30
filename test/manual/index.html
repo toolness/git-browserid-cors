@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>simplegitserver test</title>
+<img id="login" src="https://browserid.org/i/sign_in_blue.png">
+<div>
+  <p>contents of <code>myfile.txt</code>:</p>
+  <textarea></textarea>
+  <p>commit message: <input type="text" id="message"></p>
+  <button id="commit">commit</button>
+</div>
+<pre id="log"></pre>
+<script src="http://zeptojs.com/zepto.min.js"></script>
+<script src="https://browserid.org/include.js"></script>
+<script>
+var loginInfo;
+
+function log(text) {
+  $("#log")[0].textContent += text + '\n';
+}
+
+$(window).ready(function() {
+  $.get("http://localhost:3000/ls", function(result) {
+    log("files in repo: " + JSON.parse(result).files.join());
+  });
+  
+  $.get("http://localhost:3000/static/myfile.txt", function(result) {
+    $("textarea").val(result);
+  });
+  
+  $("#commit").click(function() {
+    if (!loginInfo)
+      return log("you must log in first.");
+    $.ajax({
+      type: 'POST',
+      url: 'http://localhost:3000/commit',
+      headers: {
+        'X-Access-Token': loginInfo.accessToken
+      },
+      contentType: 'application/json',
+      data: JSON.stringify({
+        add: {
+          'myfile.txt': $("textarea").val()
+        },
+        message: $("#message").val()
+      }),
+      success: function() {
+        log("commit successful");
+      },
+      error: function(req) {
+        log("commit failed: " + req.responseText);
+      }
+    });
+  });
+  
+  $("#login").click(function() {
+    navigator.id.get(function(assertion) {
+      log("POST http://localhost:3000/token");
+      $.post("http://localhost:3000/token", {
+        assertion: assertion
+      }, function(info) {
+        loginInfo = JSON.parse(info);
+        log("  -> " + JSON.stringify(loginInfo));
+      });
+    });
+  });
+});
+</script>
