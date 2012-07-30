@@ -18,9 +18,12 @@ describe("SimpleGitServer", function() {
       lastCommitOptions: null,
       addFile: function(f, c) { this.log.push(['add', f, c]); },
       rm: function(f) { this.log.push(['rm', f]); },
-      commit: function(options, cb) {
+      commit: function(options) {
         this.lastCommitOptions = options;
-        this.log.push(['commit']); cb(null);
+        this.log.push(['commit']);
+      },
+      end: function(cb) {
+        cb(null);
       }
     };
   }
@@ -148,7 +151,8 @@ describe("SimpleGitServer", function() {
     request(cfg(SimpleGitServer({
       git: {
         rm: function() {},
-        commit: function(options, cb) { cb("uhoh"); }
+        commit: function() {},
+        end: function(cb) { cb("uhoh"); }
       }
     })))
       .post('/commit')
@@ -161,7 +165,8 @@ describe("SimpleGitServer", function() {
     request(cfg(SimpleGitServer({
       git: {
         rm: function() {},
-        commit: function(options, cb) { cb({stderr: "meh does not exist"}); }
+        commit: function() {},
+        end: function(cb) { cb({stderr: "meh does not exist"}); }
       }
     })))
       .post('/commit')

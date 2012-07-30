@@ -1,7 +1,7 @@
 var _ = require('underscore'),
     express = require('express');
 
-function makeCommitHandler(git) {
+function makeCommitHandler(git, postCommit) {
   return function(req, res) {
     if (!req.user)
       return res.send(403);
@@ -33,7 +33,10 @@ function makeCommitHandler(git) {
     git.commit({
       author: author,
       message: message
-    }, function(err) {
+    });
+    if (postCommit)
+      postCommit(git);
+    git.end(function(err) {
       if (err) {
         if (!err.stderr)
           return res.send('an unknown error occurred', 500);
@@ -61,8 +64,10 @@ module.exports = function SimpleGitServer(config) {
   var self = express.createServer();
   
   self.browserIDCORS = bic;
-  self.handleCommit = makeCommitHandler(git);
   self.handleList = makeListHandler(git);
+  self.handleCommit = makeCommitHandler(git, function postCommit(git) {
+    if (git.cmd) git.cmd(['update-server-info']);
+  });
 
   self.use(express.bodyParser());
   self.use(bic.accessToken);

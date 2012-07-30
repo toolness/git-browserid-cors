@@ -117,6 +117,12 @@ function Git(options) {
       git(['ls-files', dirname], function(err, stdout) {
         cb(err, stdout.split('\n').slice(0, -1));
       });
+    },
+    end: function(cb) {
+      process.nextTick(function() { cb(null); });
+    },
+    cmd: function(args, cb) {
+      git(args, cb);
     }
   };
   

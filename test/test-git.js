@@ -204,6 +204,7 @@ describe('Git', function() {
       function onRemoveFooTxt(err) {
         if (err) return done(err);
         expect(fs.existsSync(git.abspath('foo.txt'))).to.be(false);
+        expect(fs.existsSync(git.abspath('.git/info/refs'))).to.be(true);
         done();
       }
     });
