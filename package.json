@@ -1,0 +1,23 @@
+{
+  "name": "git-browserid-cors",
+  "version": "0.0.1",
+  "author": "Atul Varma <varmaa@gmail.com>",
+  "description": "BrowserID-authenticated, CORS-enabled REST API for manipulating git repositories",
+  "scripts": {
+    "test": "node_modules/.bin/mocha -R spec"
+  },
+  "dependencies" : {
+    "express": "2.5.x",
+    "underscore": "1.3.x",
+    "browserid-cors": "git://github.com/toolness/browserid-cors.git#79b7b7ef9d214b3242f902999914ee1aabe7b4f3"
+  },
+  "devDependencies": {
+    "mocha": "1.3.x",
+    "supertest": "0.1.x",
+    "expect.js": "0.1.x"
+  },
+  "license": "MIT",
+  "engine": {
+    "node": ">=0.8"
+  }
+}
