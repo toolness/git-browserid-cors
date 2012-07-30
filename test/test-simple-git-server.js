@@ -23,9 +23,13 @@ describe("SimpleGitServer", function() {
   function mockLoggingGit() {
     return {
       log: [],
+      lastCommitOptions: null,
       addFile: function(f, c) { this.log.push(['add', f, c]); },
       rm: function(f) { this.log.push(['rm', f]); },
-      commit: function(cb) { this.log.push(['commit']); cb(null); }
+      commit: function(options, cb) {
+        this.lastCommitOptions = options;
+        this.log.push(['commit']); cb(null);
+      }
     };
   }
   
@@ -33,6 +37,15 @@ describe("SimpleGitServer", function() {
     request(cfg(SimpleGitServer({})))
       .post('/commit')
       .expect(403, done);
+  });
+
+  it("should reject empty commits", function(done) {
+    request(cfg(SimpleGitServer({})))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({message: 'lol'})
+      .expect('cannot make an empty commit')
+      .expect(400, done);
   });
   
   it("should reject commits that add+remove the same file", function(done) {
@@ -47,6 +60,36 @@ describe("SimpleGitServer", function() {
       })
       .expect('cannot add and remove same files')
       .expect(400, done);
+  });
+
+  it("should log explicit commit messages", function(done) {
+    var git = mockLoggingGit();
+    request(cfg(SimpleGitServer(git)))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({remove: ['foo'], message: 'removed foo'})
+      .expect(200, function(err) {
+        expect(git.lastCommitOptions).to.eql({
+          author: 'foo@foo.org <foo@foo.org>',
+          message: 'removed foo\n\nThis commit was made from http://bar.org.'
+        });
+        done(err);
+      });
+  });
+  
+  it("should log default commit messages", function(done) {
+    var git = mockLoggingGit();
+    request(cfg(SimpleGitServer(git)))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({remove: ['foo']})
+      .expect(200, function(err) {
+        expect(git.lastCommitOptions).to.eql({
+          author: 'foo@foo.org <foo@foo.org>',
+          message: 'This commit was made from http://bar.org.'
+        });
+        done(err);
+      });
   });
   
   it("should allow commits that add files", function(done) {
@@ -112,7 +155,7 @@ describe("SimpleGitServer", function() {
   it("should return 500 for unknown git errors on commit", function(done) {
     request(cfg(SimpleGitServer({
       rm: function() {},
-      commit: function(cb) { cb("uhoh"); }
+      commit: function(options, cb) { cb("uhoh"); }
     })))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
@@ -123,7 +166,7 @@ describe("SimpleGitServer", function() {
   it("should return 409 w/ info for known git errors", function(done) {
     request(cfg(SimpleGitServer({
       rm: function() {},
-      commit: function(cb) { cb({stderr: "meh does not exist"}); }
+      commit: function(options, cb) { cb({stderr: "meh does not exist"}); }
     })))
       .post('/commit')
       .set('X-Access-Token', 'abcd')

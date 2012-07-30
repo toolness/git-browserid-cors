@@ -14,8 +14,16 @@ module.exports = function SimpleGitServer(git) {
     
     var filesToAdd = Object.keys(req.body.add);
     var filesToRemove = req.body.remove;
+    var author = req.user.email + ' <' + req.user.email + '>';
+    var message = 'This commit was made from ' + req.user.origin + '.';
+    
+    if (filesToAdd.length == 0 && filesToRemove.length == 0)
+      return res.send('cannot make an empty commit', 400);
+
     if (_.intersection(filesToAdd, filesToRemove).length)
       return res.send('cannot add and remove same files', 400);
+    if (req.body.message)
+      message = req.body.message + '\n\n' + message;
 
     filesToAdd.forEach(function(filename) {
       git.addFile(filename, req.body.add[filename]);
@@ -23,7 +31,10 @@ module.exports = function SimpleGitServer(git) {
     filesToRemove.forEach(function(filename) {
       git.rm(filename);
     });
-    git.commit(function(err) {
+    git.commit({
+      author: author,
+      message: message
+    }, function(err) {
       if (err) {
         if (!err.stderr)
           return res.send('an unknown error occurred', 500);
