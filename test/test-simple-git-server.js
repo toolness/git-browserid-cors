@@ -1,22 +1,14 @@
 var expect = require('expect.js'),
     SimpleGitServer = require('../simple-git-server'),
     BrowserIDCORS = require('browserid-cors'),
-    express = require('express'),
     request = require('supertest');
 
 describe("SimpleGitServer", function() {
-  function cfg(server) {
-    var bic = BrowserIDCORS(),
-        app = express.createServer();
-
-    bic.tokenStorage.setTestingToken('abcd', {
+  function cfg(app) {
+    app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
       email: 'foo@foo.org',
       origin: 'http://bar.org'
     });
-    app.use(express.bodyParser());
-    app.use(bic.accessToken);
-    app.post('/commit', server.handleCommit);
-    app.get('/ls', server.handleList);
     return app;
   }
   
@@ -34,13 +26,13 @@ describe("SimpleGitServer", function() {
   }
   
   it("should reject unauthenticated commits", function(done) {
-    request(cfg(SimpleGitServer({})))
+    request(cfg(SimpleGitServer({git: {}})))
       .post('/commit')
       .expect(403, done);
   });
 
   it("should reject empty commits", function(done) {
-    request(cfg(SimpleGitServer({})))
+    request(cfg(SimpleGitServer({git: {}})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({message: 'lol'})
@@ -49,7 +41,7 @@ describe("SimpleGitServer", function() {
   });
   
   it("should reject commits that add+remove the same file", function(done) {
-    request(cfg(SimpleGitServer({})))
+    request(cfg(SimpleGitServer({git: {}})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({
@@ -64,7 +56,7 @@ describe("SimpleGitServer", function() {
 
   it("should log explicit commit messages", function(done) {
     var git = mockLoggingGit();
-    request(cfg(SimpleGitServer(git)))
+    request(cfg(SimpleGitServer({git: git})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({remove: ['foo'], message: 'removed foo'})
@@ -79,7 +71,7 @@ describe("SimpleGitServer", function() {
   
   it("should log default commit messages", function(done) {
     var git = mockLoggingGit();
-    request(cfg(SimpleGitServer(git)))
+    request(cfg(SimpleGitServer({git: git})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({remove: ['foo']})
@@ -94,7 +86,7 @@ describe("SimpleGitServer", function() {
   
   it("should allow commits that add files", function(done) {
     var git = mockLoggingGit();
-    request(cfg(SimpleGitServer(git)))
+    request(cfg(SimpleGitServer({git: git})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({
@@ -115,7 +107,7 @@ describe("SimpleGitServer", function() {
 
   it("should allow commits that remove files", function(done) {
     var git = mockLoggingGit();
-    request(cfg(SimpleGitServer(git)))
+    request(cfg(SimpleGitServer({git: git})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({
@@ -133,7 +125,7 @@ describe("SimpleGitServer", function() {
   
   it("should allow commits that add+remove files", function(done) {
     var git = mockLoggingGit();
-    request(cfg(SimpleGitServer(git)))
+    request(cfg(SimpleGitServer({git: git})))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
       .send({
@@ -154,8 +146,10 @@ describe("SimpleGitServer", function() {
   
   it("should return 500 for unknown git errors on commit", function(done) {
     request(cfg(SimpleGitServer({
-      rm: function() {},
-      commit: function(options, cb) { cb("uhoh"); }
+      git: {
+        rm: function() {},
+        commit: function(options, cb) { cb("uhoh"); }
+      }
     })))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
@@ -165,8 +159,10 @@ describe("SimpleGitServer", function() {
 
   it("should return 409 w/ info for known git errors", function(done) {
     request(cfg(SimpleGitServer({
-      rm: function() {},
-      commit: function(options, cb) { cb({stderr: "meh does not exist"}); }
+      git: {
+        rm: function() {},
+        commit: function(options, cb) { cb({stderr: "meh does not exist"}); }
+      }
     })))
       .post('/commit')
       .set('X-Access-Token', 'abcd')
@@ -176,9 +172,11 @@ describe("SimpleGitServer", function() {
 
   it("should return 500 for unknown git errors on list", function(done) {
     request(cfg(SimpleGitServer({
-      listFiles: function(name, cb) {
-        expect(name).to.be('');
-        cb("uhoh");
+      git: {
+        listFiles: function(name, cb) {
+          expect(name).to.be('');
+          cb("uhoh");
+        }
       }
     })))
       .get('/ls')
@@ -188,13 +186,22 @@ describe("SimpleGitServer", function() {
   
   it("should list files", function(done) {
     request(cfg(SimpleGitServer({
-      listFiles: function(name, cb) {
-        expect(name).to.be('bloop');
-        cb(null, ['bloop/bap.js']);
+      git: {
+        listFiles: function(name, cb) {
+          expect(name).to.be('bloop');
+          cb(null, ['bloop/bap.js']);
+        }
       }
     })))
       .get('/ls?dirname=bloop')
       .send()
       .expect(200, {files: ['bloop/bap.js']}, done);
+  });
+  
+  it("should support CORS", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .head('/')
+      .send()
+      .expect('Access-Control-Allow-Origin', '*', done);
   });
 });

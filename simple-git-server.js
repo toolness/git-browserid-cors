@@ -1,9 +1,8 @@
-var _ = require('underscore');
+var _ = require('underscore'),
+    express = require('express');
 
-module.exports = function SimpleGitServer(git) {
-  var self = {};
-  
-  self.handleCommit = function(req, res) {
+function makeCommitHandler(git) {
+  return function(req, res) {
     if (!req.user)
       return res.send(403);
     
@@ -45,13 +44,31 @@ module.exports = function SimpleGitServer(git) {
       res.send(200);
     });
   };
-  
-  self.handleList = function(req, res) {
+}
+
+function makeListHandler(git) {
+  return function(req, res) {
     git.listFiles(req.param('dirname', ''), function(err, list) {
       if (err) return res.send('an unknown error occurred', 500);
       res.send({files: list}, 200);
     });
   };
+}
+
+module.exports = function SimpleGitServer(config) {
+  var git = config.git;
+  var bic = config.browserIDCORS || require('browserid-cors')();
+  var self = express.createServer();
+  
+  self.browserIDCORS = bic;
+  self.handleCommit = makeCommitHandler(git);
+  self.handleList = makeListHandler(git);
+
+  self.use(express.bodyParser());
+  self.use(bic.accessToken);
+  self.use(bic.fullCORS);
+  self.post('/commit', self.handleCommit);
+  self.get('/ls', self.handleList);
   
   return self;
 };
