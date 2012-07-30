@@ -172,10 +172,32 @@ describe('Git', function() {
             'foo.txt': 'blarg'
           }
         })
-        .expect(200, function(err) {
-          expect(contentsOf('foo.txt')).to.be('blarg');
-          done(err);
-        });
+        .expect(200, onAddFooTxt);
+      
+      function onAddFooTxt(err) {
+        if (err) return done(err);
+        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(true);
+        expect(contentsOf('foo.txt')).to.be('blarg');
+        request(app)
+          .get('/ls')
+          .send()
+          .expect(200, {files: ['foo.txt']}, onListFiles)
+      }
+      
+      function onListFiles(err) {
+        if (err) return done(err);
+        request(app)
+          .post('/commit')
+          .set('X-Access-Token', 'abcd')
+          .send({remove: ['foo.txt']})
+          .expect(200, onRemoveFooTxt);
+      }
+      
+      function onRemoveFooTxt(err) {
+        if (err) return done(err);
+        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(false);
+        done();
+      }
     });
   });
 });
