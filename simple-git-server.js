@@ -70,5 +70,8 @@ module.exports = function SimpleGitServer(config) {
   self.post('/commit', self.handleCommit);
   self.get('/ls', self.handleList);
   
+  if (git.abspath)
+    self.use('/static', express.static(git.abspath()));
+
   return self;
 };

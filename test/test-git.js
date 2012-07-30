@@ -179,6 +179,14 @@ describe('Git', function() {
         expect(fs.existsSync(git.abspath('foo.txt'))).to.be(true);
         expect(contentsOf('foo.txt')).to.be('blarg');
         request(app)
+          .get('/static/foo.txt')
+          .send()
+          .expect(200, 'blarg', onGetFooTxt);
+      }
+
+      function onGetFooTxt(err) {
+        if (err) return done(err);
+        request(app)
           .get('/ls')
           .send()
           .expect(200, {files: ['foo.txt']}, onListFiles)
