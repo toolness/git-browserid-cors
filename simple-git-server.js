@@ -25,7 +25,12 @@ function makeCommitHandler(git, postCommit) {
       message = req.body.message + '\n\n' + message;
 
     filesToAdd.forEach(function(filename) {
-      git.addFile(filename, req.body.add[filename]);
+      var content = req.body.add[filename];
+      if (typeof(content) == 'object') {
+        if (content.encoding == 'base64')
+          content = new Buffer(content.data, 'base64');
+      }
+      git.addFile(filename, content);
     });
     filesToRemove.forEach(function(filename) {
       git.rm(filename);

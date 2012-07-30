@@ -30,6 +30,18 @@ describe('Git', function() {
   
   afterEach(nukeRootDir);
   
+  it('should accept Buffer objects to addFile()', function(done) {
+    git.init()
+       .addFile('blah.txt', new Buffer([1,2,3]))
+       .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+       .end(function(err) {
+         if (err) return done(err);
+         var contents = fs.readFileSync(git.abspath('blah.txt'));
+         expect(contents).to.eql(new Buffer([1,2,3]));
+         done();
+      });
+  });
+  
   it('should clean up on unexpected failure', function(done) {
     fs.writeFileSync(git.abspath('untracked.txt'), 'hello');
     git.init()

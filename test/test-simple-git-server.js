@@ -108,6 +108,27 @@ describe("SimpleGitServer", function() {
       });
   });
 
+  it("should allow commits that add files in base64", function(done) {
+    var git = mockLoggingGit();
+    request(cfg(SimpleGitServer({git: git})))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({
+        add: {
+          'hi.txt': {
+            encoding: 'base64',
+            data: 'SGVsbG8gV29ybGQ='
+          }
+        }
+      })
+      .expect(200, function(err) {
+        var addcmd = git.log[0];
+        expect(addcmd.slice(0,2)).to.eql(['add', 'hi.txt']);
+        expect(addcmd[2]).to.be.a(Buffer);
+        done(err);
+      });
+  });
+
   it("should allow commits that remove files", function(done) {
     var git = mockLoggingGit();
     request(cfg(SimpleGitServer({git: git})))
