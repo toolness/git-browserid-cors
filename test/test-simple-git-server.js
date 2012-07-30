@@ -161,6 +161,28 @@ describe("SimpleGitServer", function() {
       .expect(500, 'an unknown error occurred', done);
   });
 
+  it("should return 200 when commit results in no change", function(done) {
+    request(cfg(SimpleGitServer({
+      git: {
+        rm: function() {},
+        commit: function() {},
+        end: function(cb) {
+          cb({
+            stderr: '',
+            stdout: '# On branch master\nnothing to commit (working directory clean)\n',
+            exitCode: 1
+          });
+        }
+      }
+    })))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({remove: ['meh']})
+      .expect(409, {
+        error: '# On branch master\nnothing to commit (working directory clean)\n'
+      }, done);
+  });
+
   it("should return 409 w/ info for known git errors", function(done) {
     request(cfg(SimpleGitServer({
       git: {
@@ -201,6 +223,14 @@ describe("SimpleGitServer", function() {
       .get('/ls?dirname=bloop')
       .send()
       .expect(200, {files: ['bloop/bap.js']}, done);
+  });
+  
+  it("should have /token endpoint", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .post('/token')
+      .set('Origin', 'http://lol.org')
+      .send()
+      .expect(400, 'assertion required', done);
   });
   
   it("should support CORS", function(done) {

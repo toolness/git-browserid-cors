@@ -38,10 +38,11 @@ function makeCommitHandler(git, postCommit) {
       postCommit(git);
     git.end(function(err) {
       if (err) {
-        if (!err.stderr)
+        var message = err.stderr || err.stdout;
+        if (!message)
           return res.send('an unknown error occurred', 500);
         return res.send({
-          error: err.stderr
+          error: message
         }, 409);
       }
       res.send(200);
@@ -72,6 +73,7 @@ module.exports = function SimpleGitServer(config) {
   self.use(express.bodyParser());
   self.use(bic.accessToken);
   self.use(bic.fullCORS);
+  self.post('/token', bic.handleTokenRequest);
   self.post('/commit', self.handleCommit);
   self.get('/ls', self.handleList);
   
