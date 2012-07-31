@@ -12,6 +12,7 @@
 <script src="http://zeptojs.com/zepto.min.js"></script>
 <script src="https://browserid.org/include.js"></script>
 <script>
+var BASE_API_URL = "http://localhost:3000/";
 var loginInfo;
 
 function log(text) {
@@ -19,11 +20,11 @@ function log(text) {
 }
 
 $(window).ready(function() {
-  $.get("http://localhost:3000/ls", function(result) {
+  $.get(BASE_API_URL + "ls", function(result) {
     log("files in repo: " + JSON.parse(result).files.join());
   });
   
-  $.get("http://localhost:3000/static/myfile.txt", function(result) {
+  $.get(BASE_API_URL + "static/myfile.txt", function(result) {
     $("textarea").val(result);
   });
   
@@ -32,7 +33,7 @@ $(window).ready(function() {
       return log("you must log in first.");
     $.ajax({
       type: 'POST',
-      url: 'http://localhost:3000/commit',
+      url: BASE_API_URL + 'commit',
       headers: {
         'X-Access-Token': loginInfo.accessToken
       },
@@ -54,8 +55,8 @@ $(window).ready(function() {
   
   $("#login").click(function() {
     navigator.id.get(function(assertion) {
-      log("POST http://localhost:3000/token");
-      $.post("http://localhost:3000/token", {
+      log("POST " + BASE_API_URL + "token");
+      $.post(BASE_API_URL + "token", {
         assertion: assertion
       }, function(info) {
         loginInfo = JSON.parse(info);
