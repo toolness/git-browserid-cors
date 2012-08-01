@@ -2,6 +2,7 @@ var expect = require('expect.js'),
     fs = require('fs'),
     path = require('path'),
     exec =  require('child_process').exec,
+    makePatch = require('../patch-file').makePatch,
     Git = require('../git');
 
 describe('Git', function() {
@@ -130,6 +131,22 @@ describe('Git', function() {
           done();
         });
       })
+  });
+  
+  it('should patch files', function(done) {
+    var patch = makePatch('hwllo', 'hello');
+    git.init()
+      .addFile('blah.txt', 'hwllo there')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .patchFile('blah.txt', patch)
+      .commit({
+        author: 'Foo <foo@foo.org>',
+        message: 'typo fix.'
+      }, function(err) {
+        if (err) return done(err);
+        expect(contentsOf('blah.txt')).to.be('hello there');
+        done();
+      });
   });
   
   it('should get rid of untracked files', function(done) {

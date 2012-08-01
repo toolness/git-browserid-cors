@@ -1,6 +1,7 @@
 var spawn = require('child_process').spawn,
     path = require('path'),
     fs = require('fs'),
+    patchFile = require('./patch-file').patchFile,
     CommandSerializer = require('./command-serializer');
 
 const NO_HEAD_ERROR = "fatal: Failed to resolve 'HEAD' as a valid ref.\n";
@@ -90,6 +91,13 @@ function Git(options) {
     },
     revert: function(cb) {
       git(['revert', 'HEAD'], cb);
+    },
+    patchFile: function(filename, patch, cb) {
+      var self = this;
+      patchFile(abspath(filename), patch, function(err) {
+        if (err) return cb(err);
+        self.add(filename, cb);
+      });
     },
     addFile: function(filename, data, cb) {
       var self = this;

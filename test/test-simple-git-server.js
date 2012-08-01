@@ -17,6 +17,7 @@ describe("SimpleGitServer", function() {
       log: [],
       lastCommitOptions: null,
       addFile: function(f, c) { this.log.push(['add', f, c]); },
+      patchFile: function(f, p) { this.log.push(['patch', f, p]); },
       rm: function(f) { this.log.push(['rm', f]); },
       commit: function(options) {
         this.lastCommitOptions = options;
@@ -108,6 +109,26 @@ describe("SimpleGitServer", function() {
       });
   });
 
+  it("should allow commits that patch files", function(done) {
+    var git = mockLoggingGit();
+    request(cfg(SimpleGitServer({git: git})))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({
+        add: {
+          'hi.txt': {
+            type: 'patch',
+            data: 'i am a patch!'
+          }
+        }
+      })
+      .expect(200, function(err) {
+        expect(git.log).to.eql([['patch', 'hi.txt', 'i am a patch!'],
+                                ['commit']]);
+        done(err);
+      });
+  });
+  
   it("should allow commits that add files in base64", function(done) {
     var git = mockLoggingGit();
     request(cfg(SimpleGitServer({git: git})))

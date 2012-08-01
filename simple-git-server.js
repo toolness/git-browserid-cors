@@ -30,7 +30,10 @@ function makeCommitHandler(git, postCommit) {
         if (content.encoding == 'base64')
           content = new Buffer(content.data, 'base64');
       }
-      git.addFile(filename, content);
+      if (content.type != 'patch')
+        git.addFile(filename, content);
+      else
+        git.patchFile(filename, content.data);
     });
     filesToRemove.forEach(function(filename) {
       git.rm(filename);
