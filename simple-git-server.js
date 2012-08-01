@@ -1,6 +1,10 @@
 var _ = require('underscore'),
     express = require('express');
 
+function username(email) {
+  return email.slice(0, email.indexOf('@'));
+}
+
 function makeCommitHandler(git, postCommit) {
   return function(req, res) {
     if (!req.user)
@@ -13,7 +17,7 @@ function makeCommitHandler(git, postCommit) {
     
     var filesToAdd = Object.keys(req.body.add);
     var filesToRemove = req.body.remove;
-    var author = req.user.email + ' <' + req.user.email + '>';
+    var author = username(req.user.email) + ' <' + req.user.email + '>';
     var message = 'This commit was made from ' + req.user.origin + '.';
     
     if (filesToAdd.length == 0 && filesToRemove.length == 0)

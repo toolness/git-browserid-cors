@@ -66,7 +66,7 @@ describe("SimpleGitServer", function() {
       .send({remove: ['foo'], message: 'removed foo'})
       .expect(200, function(err) {
         expect(git.lastCommitOptions).to.eql({
-          author: 'foo@foo.org <foo@foo.org>',
+          author: 'foo <foo@foo.org>',
           message: 'removed foo\n\nThis commit was made from http://bar.org.'
         });
         done(err);
@@ -81,7 +81,7 @@ describe("SimpleGitServer", function() {
       .send({remove: ['foo']})
       .expect(200, function(err) {
         expect(git.lastCommitOptions).to.eql({
-          author: 'foo@foo.org <foo@foo.org>',
+          author: 'foo <foo@foo.org>',
           message: 'This commit was made from http://bar.org.'
         });
         done(err);
