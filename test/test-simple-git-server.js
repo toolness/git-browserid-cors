@@ -16,6 +16,7 @@ describe("SimpleGitServer", function() {
     return {
       log: [],
       lastCommitOptions: null,
+      abspath: function() { return '/blah'; },
       addFile: function(f, c) { this.log.push(['add', f, c]); },
       patchFile: function(f, p) { this.log.push(['patch', f, p]); },
       rm: function(f) { this.log.push(['rm', f]); },
@@ -42,6 +43,23 @@ describe("SimpleGitServer", function() {
       .send({message: 'lol'})
       .expect('cannot make an empty commit')
       .expect(400, done);
+  });
+  
+  it("should reject commits with invalid filenames", function(done) {
+    request(cfg(SimpleGitServer({
+      git: {
+        abspath: function(path) {
+          if (!path)
+            return "/blah";
+          else
+            return null;
+        }
+      }
+    })))
+      .post('/commit')
+      .set('X-Access-Token', 'abcd')
+      .send({remove: ['../meh']})
+      .expect(400, 'invalid filenames: ../meh', done);
   });
   
   it("should reject commits that add+remove the same file", function(done) {
@@ -192,6 +210,7 @@ describe("SimpleGitServer", function() {
   it("should return 500 for unknown git errors on commit", function(done) {
     request(cfg(SimpleGitServer({
       git: {
+        abspath: function() { return '/blah'; },
         rm: function() {},
         commit: function() {},
         end: function(cb) { cb("uhoh"); }
@@ -206,6 +225,7 @@ describe("SimpleGitServer", function() {
   it("should return 200 when commit results in no change", function(done) {
     request(cfg(SimpleGitServer({
       git: {
+        abspath: function() { return '/blah'; },
         rm: function() {},
         commit: function() {},
         end: function(cb) {
@@ -228,6 +248,7 @@ describe("SimpleGitServer", function() {
   it("should return 409 w/ info for known git errors", function(done) {
     request(cfg(SimpleGitServer({
       git: {
+        abspath: function() { return '/blah'; },
         rm: function() {},
         commit: function() {},
         end: function(cb) { cb({stderr: "meh does not exist"}); }

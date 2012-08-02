@@ -133,6 +133,16 @@ describe('Git', function() {
       })
   });
   
+  it('should return null when resolving an invalid abspath', function() {
+    expect(git.abspath('../blargh')).to.be(null);
+    expect(git.abspath('/foo/../../blargh')).to.be(null);
+  });
+
+  it('should return a string when resolving a valid abspath', function() {
+    expect(git.abspath('blargh')).to.be.a('string');
+    expect(git.abspath('/usr/bin').indexOf(path.normalize(rootDir))).to.be(0);
+  });
+  
   it('should patch files', function(done) {
     var patch = makePatch('hwllo', 'hello');
     git.init()
@@ -165,7 +175,7 @@ describe('Git', function() {
     git.init()
       .addFile('blah.txt', 'hello there')
       .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
-      .addFile('blah.txt', 'goodbye yo')
+      .addFile('/blah.txt', 'goodbye yo')
       .commit({
         author: 'Foo <foo@foo.org>',
         message: 'changed file.'

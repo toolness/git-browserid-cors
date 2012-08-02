@@ -1,4 +1,5 @@
 var _ = require('underscore'),
+    path = require('path'),
     express = require('express');
 
 function username(email) {
@@ -28,6 +29,16 @@ function makeCommitHandler(git, postCommit) {
     if (req.body.message)
       message = req.body.message + '\n\n' + message;
 
+    var invalidFilenames = [];
+    filesToAdd.concat(filesToRemove).forEach(function(filename) {
+      var abspath = git.abspath(filename);
+      if (abspath === null)
+        invalidFilenames.push(filename);
+    });
+    
+    if (invalidFilenames.length)
+      return res.send('invalid filenames: ' + invalidFilenames.join(), 400);
+    
     filesToAdd.forEach(function(filename) {
       var content = req.body.add[filename];
       if (typeof(content) == 'object') {

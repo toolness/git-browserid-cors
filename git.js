@@ -14,7 +14,7 @@ function mkpath(path, cb) {
 
 function Git(options) {
   var executable = options.executable || 'git',
-      rootDir = options.rootDir,
+      rootDir = path.normalize(options.rootDir),
       debug = options.debug,
       cs = CommandSerializer(),
       self = {};
@@ -66,7 +66,10 @@ function Git(options) {
   }
   
   var abspath = self.abspath = function abspath(filename) {
-    return path.join(rootDir, filename);
+    var joinedPath = path.normalize(path.join(rootDir, filename));
+    if (joinedPath.indexOf(rootDir) != 0)
+      return null;
+    return joinedPath;
   }
   
   var commands = {
