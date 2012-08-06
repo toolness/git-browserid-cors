@@ -31,6 +31,38 @@ describe('Git', function() {
   
   afterEach(nukeRootDir);
   
+  it('should pull', function(done) {
+    var git2dir = rootDir + '/repo2';
+    var git2 = Git({rootDir: git2dir});
+    
+    fs.mkdirSync(git2dir);
+    
+    git.init()
+      .addFile('blah.txt', 'hello')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .end(function(err) {
+        if (err) return done(err);
+      
+        git2.init()
+          .pull({
+            repository: rootDir,
+            refspec: 'master',
+            email: 'blap@blap.org',
+            name: 'Blap Person'
+          })
+          .end(function(err) {
+            if (err) return done(err);
+            var blahTxt = fs.readFileSync(git2.abspath('blah.txt'), 'utf8');
+            var reflogPath = git2.abspath('.git/logs/HEAD')
+            var reflog = fs.readFileSync(reflogPath, 'utf8');
+            expect(blahTxt).to.be('hello');
+            expect(reflog).to.match(/blap@blap\.org/);
+            expect(reflog).to.match(/Blap Person/);
+            done();
+          });
+      });
+  });
+  
   it('should accept Buffer objects to addFile()', function(done) {
     git.init()
        .addFile('blah.txt', new Buffer([1,2,3]))

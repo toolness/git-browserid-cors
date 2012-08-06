@@ -19,12 +19,18 @@ function Git(options) {
       cs = CommandSerializer(),
       self = {};
 
-  function git(args, cb) {
+  function git(args, env, cb) {
+    if (typeof(env) == 'function') {
+      cb = env;
+      env = undefined;
+    }
+    env = env || {};
+
     var cmdline = 'git ' + args.join(' '),
         stderr = [],
         stdout = [],
         exitCode = undefined,
-        process = spawn(executable, args, {cwd: rootDir});
+        process = spawn(executable, args, {cwd: rootDir, env: env});
 
     if (!cb)
       throw new Error('no callback given for: ' + cmdline);
@@ -128,6 +134,17 @@ function Git(options) {
       git(['ls-files', dirname], function(err, stdout) {
         cb(err, stdout.split('\n').slice(0, -1));
       });
+    },
+    pull: function(options, cb) {
+      var env = {};
+      
+      if (options.email)
+        env['GIT_COMMITTER_EMAIL'] = options.email;
+      if (options.name)
+        env['GIT_COMMITTER_NAME'] = options.name;
+      
+      git(['pull', '--ff-only', options.repository, options.refspec],
+          env, cb);
     },
     end: function(cb) {
       process.nextTick(function() { cb(null); });
