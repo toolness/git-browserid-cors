@@ -164,7 +164,15 @@ describe("MultiGitServer integration", function() {
       request(app)
         .get('/static/somerepo/foo.txt')
         .send()
-        .expect(200, 'blarg2', done);
+        .expect(200, 'blarg2', getNonexistentStaticFile);
+    }
+    
+    function getNonexistentStaticFile(err) {
+      if (err) return done(err);
+      request(app)
+        .get('/static/somerepo/pwaeognpoawegnpnoagwe')
+        .send()
+        .expect(404, done);
     }
   });
 });
