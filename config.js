@@ -1,4 +1,5 @@
 module.exports = {
-  rootDir: 'repository',
+  rootDir: 'repositories',
+  type: 'multiple',
   port: 3000
 };
