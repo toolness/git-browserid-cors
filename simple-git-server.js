@@ -109,25 +109,32 @@ function makePullHandler(git) {
   }
 }
 
+function SimpleGitMethodHandlers(git) {
+  var self = {};
+
+  self.list = makeListHandler(git);
+  self.commit = makeCommitHandler(git, function postCommit(git) {
+    if (git.cmd) git.cmd(['update-server-info']);
+  });
+  self.pull = makePullHandler(git);
+
+  return self;
+}
+
 module.exports = function SimpleGitServer(config) {
   var git = config.git;
   var bic = config.browserIDCORS || require('browserid-cors')();
   var self = express.createServer();
+  var handlers = SimpleGitMethodHandlers(git);
   
   self.browserIDCORS = bic;
-  self.handleList = makeListHandler(git);
-  self.handleCommit = makeCommitHandler(git, function postCommit(git) {
-    if (git.cmd) git.cmd(['update-server-info']);
-  });
-  self.handlePull = makePullHandler(git);
-
   self.use(express.bodyParser());
   self.use(bic.accessToken);
   self.use(bic.fullCORS);
   self.post('/token', bic.handleTokenRequest);
-  self.post('/commit', self.handleCommit);
-  self.get('/ls', self.handleList);
-  self.post('/pull', self.handlePull);
+  self.post('/commit', handlers.commit);
+  self.get('/ls', handlers.list);
+  self.post('/pull', handlers.pull);
 
   if (git.abspath)
     self.use('/static', express.static(git.abspath()));
