@@ -3,33 +3,21 @@ var expect = require('expect.js'),
     path = require('path'),
     exec =  require('child_process').exec,
     makePatch = require('../patch-file').makePatch,
-    Git = require('../git');
+    Git = require('../git'),
+    utils = require('./utils');
 
 describe('Git', function() {
   var rootDir = __dirname + '/../_testrepo',
+      testDir = utils.TestDir(rootDir, beforeEach, afterEach),
       git;
-  
-  function nukeRootDir(cb) {
-    if (fs.existsSync(rootDir))
-      exec('rm -rf ' + rootDir, cb);
-    else
-      cb(null);
-  }
-  
+    
   function contentsOf(filename) {
     return fs.readFileSync(git.abspath(filename), 'utf8');
   }
-  
-  beforeEach(function(done) {
-    nukeRootDir(function(err) {
-      if (err) throw err;
-      fs.mkdirSync(rootDir);
-      git = Git({rootDir: rootDir, debug: true});
-      done();
-    });
+
+  beforeEach(function() {
+    git = Git({rootDir: rootDir, debug: true});
   });
-  
-  afterEach(nukeRootDir);
   
   it('should pull', function(done) {
     var git2dir = rootDir + '/repo2';
