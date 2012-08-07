@@ -8,6 +8,8 @@ var rootDir = config.rootDir;
 if (rootDir[0] != '/')
   rootDir = path.join(__dirname, rootDir);
 
+console.log("root directory is", rootDir);
+
 if (config.type == "multiple") {
   var MultiGitServer = require('./git-server').MultiGitServer;
   var GitManager = require('./git-manager');
