@@ -564,6 +564,18 @@ describe("MultiGitServer", function() {
       .expect(404, 'invalid repository id: ......', done);
   });
   
+  it("should return error on invalid POST to /commit", function(done) {
+    var app = cfg(MultiGitServer({gitManager: {rootDir: __dirname}}));
+    
+    request(app)
+      .post("/commit")
+      .set('X-Access-Token', 'abcd')
+      .send({
+        remove: ['foo/a', 'gre/b']
+      })
+      .expect(400, 'commit cannot span multiple repos: foo, gre', done);
+  });
+  
   it("should resolve POSTs to /commit to repos", function(done) {
     var app = cfg(MultiGitServer({
       gitManager: {
