@@ -165,7 +165,7 @@ exports.MultiGitServer = function MultiGitServer(config) {
   self.use('/static', express.static(gitManager.rootDir));
   self.post('/:id/commit', validId, createGitFromId, handlers.commit);
   self.get('/:id/ls', validId, gitFromId, handlers.list);
-  self.post('/:id/pull', validId, gitFromId, handlers.pull);
+  self.post('/:id/pull', validId, createGitFromId, handlers.pull);
   
   return self;
 };
