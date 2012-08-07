@@ -7,8 +7,10 @@ function username(email) {
   return email.slice(0, email.indexOf('@'));
 }
 
-function makeCommitHandler(git, postCommit) {
-  return function(req, res) {
+var handlers = {
+  commit: function(req, res) {
+    var git = req.git;
+
     if (!req.user)
       return res.send(403);
     
@@ -58,8 +60,8 @@ function makeCommitHandler(git, postCommit) {
       author: author,
       message: message
     });
-    if (postCommit)
-      postCommit(git);
+    if (git.cmd)
+      git.cmd(['update-server-info']);
     git.end(function(err) {
       if (err) {
         var message = err.stderr || err.stdout;
@@ -71,20 +73,18 @@ function makeCommitHandler(git, postCommit) {
       }
       res.send(200);
     });
-  };
-}
+  },
+  list: function(req, res) {
+    var git = req.git;
 
-function makeListHandler(git) {
-  return function(req, res) {
     git.listFiles(req.param('dirname', ''), function(err, list) {
       if (err) return res.send('an unknown error occurred', 500);
       res.send({files: list}, 200);
     });
-  };
-}
+  },
+  pull: function(req, res) {
+    var git = req.git;
 
-function makePullHandler(git) {  
-  return function(req, res) {
     if (!req.user)
       return res.send(403);
     
@@ -107,30 +107,18 @@ function makePullHandler(git) {
       return res.send(200);
     });
   }
-}
-
-function SimpleGitMethodHandlers(git) {
-  var self = {};
-
-  self.list = makeListHandler(git);
-  self.commit = makeCommitHandler(git, function postCommit(git) {
-    if (git.cmd) git.cmd(['update-server-info']);
-  });
-  self.pull = makePullHandler(git);
-
-  return self;
-}
+};
 
 module.exports = function SimpleGitServer(config) {
   var git = config.git;
   var bic = config.browserIDCORS || require('browserid-cors')();
   var self = express.createServer();
-  var handlers = SimpleGitMethodHandlers(git);
   
   self.browserIDCORS = bic;
   self.use(express.bodyParser());
   self.use(bic.accessToken);
   self.use(bic.fullCORS);
+  self.use(function(req, res, next) { req.git = git; next(); });
   self.post('/token', bic.handleTokenRequest);
   self.post('/commit', handlers.commit);
   self.get('/ls', handlers.list);
