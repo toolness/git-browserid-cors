@@ -1,7 +1,103 @@
 var expect = require('expect.js'),
     SimpleGitServer = require('../git-server').SimpleGitServer,
+    MultiGitServer = require('../git-server').MultiGitServer
     BrowserIDCORS = require('browserid-cors'),
     request = require('supertest');
+
+describe("MultiGitServer", function() {
+  var fs = require('fs'),
+      utils = require('./utils'),
+      testDir = utils.TestDir('../_multigit-test', beforeEach, afterEach),
+      Git = require('../git');
+
+  it('should work', function(done) {
+    var gitManager = require('../git-manager')(testDir.path());
+    var otherGit = Git({rootDir: testDir.path('otherrepo')});
+    var app = MultiGitServer({gitManager: gitManager});
+    
+    app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
+      email: 'foo@foo.org',
+      origin: 'http://bar.org'
+    });
+    
+    fs.mkdirSync(otherGit.abspath());
+    otherGit.init()
+      .addFile('blah.txt', 'hello there')
+      .commit({author: 'Foo <foo@foo.org>', message: 'origination.'})
+      .end(function(err) {
+        if (err) return done(err);
+        request(app)
+          .post('/otherrepo/commit')
+          .set('X-Access-Token', 'abcd')
+          .send({
+            add: {
+              'foo.txt': 'blarg'
+            }
+          })
+          .expect(200, function(err) {
+            if (err) return done(err);
+            otherGit.listFiles(function(err, list) {
+              if (err) return done(err);
+              expect(list).to.eql(['blah.txt', 'foo.txt']);
+              createRepoAndMakeFirstCommit();
+            });
+          });
+      });
+
+    function createRepoAndMakeFirstCommit() {
+      request(app)
+        .post('/somerepo/commit')
+        .set('X-Access-Token', 'abcd')
+        .send({
+          add: {
+            'foo.txt': 'blarg'
+          }
+        })
+        .expect(200, function(err) {
+          if (err) return done(err);
+          expect(fs.existsSync(gitManager.rootDir + '/somerepo/.git'))
+            .to.be(true);
+          var contents = fs.readFileSync(gitManager.rootDir +
+                                         '/somerepo/foo.txt', 'utf8');
+          expect(contents).to.be('blarg');
+          makeSecondCommit();
+        });
+    }
+      
+    function makeSecondCommit() {
+      request(app)
+        .post('/somerepo/commit')
+        .set('X-Access-Token', 'abcd')
+        .send({
+          add: {
+            'foo.txt': 'blarg2'
+          }
+        })
+        .expect(200, function(err) {
+          if (err) return done(err);
+          var contents = fs.readFileSync(gitManager.rootDir +
+                                         '/somerepo/foo.txt', 'utf8');
+          expect(contents).to.be('blarg2');
+          requestListing();
+        });
+    }
+    
+    function requestListing() {
+      request(app)
+        .get('/somerepo/ls')
+        .send()
+        .expect(200, {files: ['foo.txt']}, requestListingOfNonexistentRepo);
+    }
+    
+    function requestListingOfNonexistentRepo(err) {
+      if (err) return done(err);
+      request(app)
+        .get('/nonexistentrepo/ls')
+        .send()
+        .expect(404, done);
+    }
+  });
+});
 
 describe("SimpleGitServer", function() {
   function cfg(app) {
