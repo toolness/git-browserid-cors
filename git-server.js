@@ -129,32 +129,33 @@ function BaseServer(browserIDCORS) {
 exports.MultiGitServer = function MultiGitServer(config) {
   var gitManager = config.gitManager;
   var self = BaseServer(config.browserIDCORS);
-  
-  var gitFromId = function(req, res, next) {
-    var id = req.param('id');
-    gitManager.get(id, function(err, git) {
-      if (err)
-        return res.send(404);
-      req.git = git;
-      next();
-    });
-  };
-  
-  self.put('/:id', function(req, res) {
+
+  function createGitFromId(req, res, next) {
     if (!req.user)
       return res.send(403);
 
-    gitManager.create(id, self.dv, function(err) {
-      if (err) {
-        if (err.code == "EXISTS")
-          return res.send(409);
-        else
-          return res.send(500);
-      }
-      res.send(201);
+    gitManager.get(req.param('id'), true, function(err, git) {
+      if (err)
+        return res.send(500);
+      req.git = git;
+      next();
     });
-  });
-  self.post('/:id/commit', gitFromId, handlers.commit);
+  }
+  
+  function gitFromId(req, res, next) {
+    gitManager.get(req.param('id'), false, function(err, git) {
+      if (err) {
+        if (err.code == "ENOENT")
+          return res.send(404);
+        return res.send(500);
+      }
+      req.git = git;
+      next();
+    });
+  }
+  
+  self.use('/static', gitManager.rootDir);
+  self.post('/:id/commit', createGitFromId, handlers.commit);
   self.get('/:id/ls', gitFromId, handlers.list);
   self.post('/:id/pull', gitFromId, handlers.pull);
   
