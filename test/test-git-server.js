@@ -1,5 +1,5 @@
 var expect = require('expect.js'),
-    SimpleGitServer = require('../simple-git-server'),
+    SimpleGitServer = require('../git-server').SimpleGitServer,
     BrowserIDCORS = require('browserid-cors'),
     request = require('supertest');
 

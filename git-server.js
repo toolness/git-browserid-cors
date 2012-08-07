@@ -126,7 +126,7 @@ function BaseServer(browserIDCORS) {
   return self;
 }
 
-module.exports = function SimpleGitServer(config) {
+exports.SimpleGitServer = function SimpleGitServer(config) {
   var git = config.git;
   var self = BaseServer(config.browserIDCORS);
   

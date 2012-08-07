@@ -224,7 +224,7 @@ describe('Git', function() {
   
   it('should integrate with SimpleGitServer', function(done) {
     var request = require('supertest');
-    var SimpleGitServer = require('../simple-git-server');
+    var SimpleGitServer = require('../git-server').SimpleGitServer;
     var app = SimpleGitServer({git: git});
 
     git.init(function(err) {
