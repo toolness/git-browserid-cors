@@ -7,7 +7,7 @@ function username(email) {
   return email.slice(0, email.indexOf('@'));
 }
 
-var handlers = {
+var Handlers = {
   commit: function(req, res) {
     var git = req.git;
 
@@ -128,8 +128,16 @@ function BaseServer(browserIDCORS) {
 
 exports.MultiGitServer = function MultiGitServer(config) {
   var gitManager = config.gitManager;
+  var handlers = config.handlers || Handlers;
   var self = BaseServer(config.browserIDCORS);
 
+  function validId(req, res, next) {
+    var id = req.param('id');
+    if (!id.match(/[A-Za-z0-9_\-]+/))
+      return res.send('invalid repository id: ' + id, 404);
+    next();
+  }
+  
   function createGitFromId(req, res, next) {
     if (!req.user)
       return res.send(403);
@@ -154,16 +162,17 @@ exports.MultiGitServer = function MultiGitServer(config) {
     });
   }
   
-  self.use('/static', gitManager.rootDir);
-  self.post('/:id/commit', createGitFromId, handlers.commit);
-  self.get('/:id/ls', gitFromId, handlers.list);
-  self.post('/:id/pull', gitFromId, handlers.pull);
+  self.use('/static', express.static(gitManager.rootDir));
+  self.post('/:id/commit', validId, createGitFromId, handlers.commit);
+  self.get('/:id/ls', validId, gitFromId, handlers.list);
+  self.post('/:id/pull', validId, gitFromId, handlers.pull);
   
   return self;
 };
 
 exports.SimpleGitServer = function SimpleGitServer(config) {
   var git = config.git;
+  var handlers = config.handlers || Handlers;
   var self = BaseServer(config.browserIDCORS);
   
   self.use(function(req, res, next) { req.git = git; next(); });

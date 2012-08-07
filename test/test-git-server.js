@@ -537,3 +537,14 @@ describe("SimpleGitServer", function() {
       .expect('Access-Control-Allow-Origin', '*', done);
   });
 });
+
+describe("MultiGitServer", function() {
+  it("should reject illegal repository names", function(done) {
+    var app = MultiGitServer({gitManager: {rootDir: '/meh'}});
+    
+    request(app)
+      .get('/....../ls')
+      .send()
+      .expect(404, 'invalid repository id: ......', done);
+  });
+});
