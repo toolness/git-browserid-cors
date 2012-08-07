@@ -126,6 +126,41 @@ function BaseServer(browserIDCORS) {
   return self;
 }
 
+exports.MultiGitServer = function MultiGitServer(config) {
+  var gitManager = config.gitManager;
+  var self = BaseServer(config.browserIDCORS);
+  
+  var gitFromId = function(req, res, next) {
+    var id = req.param('id');
+    gitManager.get(id, function(err, git) {
+      if (err)
+        return res.send(404);
+      req.git = git;
+      next();
+    });
+  };
+  
+  self.put('/:id', function(req, res) {
+    if (!req.user)
+      return res.send(403);
+
+    gitManager.create(id, self.dv, function(err) {
+      if (err) {
+        if (err.code == "EXISTS")
+          return res.send(409);
+        else
+          return res.send(500);
+      }
+      res.send(201);
+    });
+  });
+  self.post('/:id/commit', gitFromId, handlers.commit);
+  self.get('/:id/ls', gitFromId, handlers.list);
+  self.post('/:id/pull', gitFromId, handlers.pull);
+  
+  return self;
+};
+
 exports.SimpleGitServer = function SimpleGitServer(config) {
   var git = config.git;
   var self = BaseServer(config.browserIDCORS);
