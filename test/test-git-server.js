@@ -1,15 +1,77 @@
 var expect = require('expect.js'),
+    fs = require('fs'),
+    utils = require('./utils')
+    Git = require('../git'),
     SimpleGitServer = require('../git-server').SimpleGitServer,
     MultiGitServer = require('../git-server').MultiGitServer
     BrowserIDCORS = require('browserid-cors'),
     request = require('supertest');
 
-describe("MultiGitServer", function() {
-  var fs = require('fs'),
-      utils = require('./utils'),
-      testDir = utils.TestDir('../_multigit-test', beforeEach, afterEach),
-      Git = require('../git');
+describe("SimpleGitServer integration", function() {
+  var testDir = utils.TestDir('../_simplegit-test', beforeEach, afterEach);
+  
+  it('should work', function(done) {
+    var git = Git({rootDir: testDir.path()});
+    var app = SimpleGitServer({git: git});
 
+    git.init(function(err) {
+      if (err) return done(err);
+
+      app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
+        email: 'foo@foo.org',
+        origin: 'http://bar.org'
+      });
+    
+      request(app)
+        .post('/commit')
+        .set('X-Access-Token', 'abcd')
+        .send({
+          add: {
+            'foo.txt': 'blarg'
+          }
+        })
+        .expect(200, onAddFooTxt);
+      
+      function onAddFooTxt(err) {
+        if (err) return done(err);
+        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(true);
+        expect(testDir.contentsOf('foo.txt')).to.be('blarg');
+        request(app)
+          .get('/static/foo.txt')
+          .send()
+          .expect(200, 'blarg', onGetFooTxt);
+      }
+
+      function onGetFooTxt(err) {
+        if (err) return done(err);
+        request(app)
+          .get('/ls')
+          .send()
+          .expect(200, {files: ['foo.txt']}, onListFiles)
+      }
+      
+      function onListFiles(err) {
+        if (err) return done(err);
+        request(app)
+          .post('/commit')
+          .set('X-Access-Token', 'abcd')
+          .send({remove: ['foo.txt']})
+          .expect(200, onRemoveFooTxt);
+      }
+      
+      function onRemoveFooTxt(err) {
+        if (err) return done(err);
+        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(false);
+        expect(fs.existsSync(git.abspath('.git/info/refs'))).to.be(true);
+        done();
+      }
+    });
+  });
+});
+
+describe("MultiGitServer integration", function() {
+  var testDir = utils.TestDir('../_multigit-test', beforeEach, afterEach);
+  
   it('should work', function(done) {
     var gitManager = require('../git-manager')(testDir.path());
     var otherGit = Git({rootDir: testDir.path('otherrepo')});

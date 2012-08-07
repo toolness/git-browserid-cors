@@ -29,6 +29,9 @@ exports.TestDir = function TestDir(rootDir, beforeEach, afterEach) {
       for (var i = 0; i < arguments.length; i++)
         parts.push(arguments[i]);
       return path.join.apply(path, parts);
+    },
+    contentsOf: function(filename) {
+      return fs.readFileSync(this.path(filename), 'utf8');
     }
   };
 }

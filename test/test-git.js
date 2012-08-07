@@ -10,10 +10,6 @@ describe('Git', function() {
   var rootDir = __dirname + '/../_testrepo',
       testDir = utils.TestDir(rootDir, beforeEach, afterEach),
       git;
-    
-  function contentsOf(filename) {
-    return fs.readFileSync(git.abspath(filename), 'utf8');
-  }
 
   beforeEach(function() {
     git = Git({rootDir: rootDir, debug: true});
@@ -73,7 +69,7 @@ describe('Git', function() {
          expect(err.stderr).to.be('fatal: pathspec \'moose.txt\' did not ' +
                                   'match any files\n');
          expect(fs.existsSync(git.abspath('untracked.txt'))).to.be(false);
-         expect(contentsOf('blah.txt')).to.be('hello');
+         expect(testDir.contentsOf('blah.txt')).to.be('hello');
          done();
        });
   });
@@ -147,7 +143,7 @@ describe('Git', function() {
         fs.writeFileSync(git.abspath('blah.txt'), 'changes here!');
         git.reset(function(err) {
           if (err) return done(err);
-          expect(contentsOf('blah.txt')).to.be('hello there');
+          expect(testDir.contentsOf('blah.txt')).to.be('hello there');
           done();
         });
       })
@@ -174,7 +170,7 @@ describe('Git', function() {
         message: 'typo fix.'
       }, function(err) {
         if (err) return done(err);
-        expect(contentsOf('blah.txt')).to.be('hello there');
+        expect(testDir.contentsOf('blah.txt')).to.be('hello there');
         done();
       });
   });
@@ -201,71 +197,12 @@ describe('Git', function() {
         message: 'changed file.'
       }, function(err) {
         if (err) return done(err);
-        expect(contentsOf('blah.txt')).to.be('goodbye yo');
+        expect(testDir.contentsOf('blah.txt')).to.be('goodbye yo');
         git.revert(function(err) {
           if (err) return done(err);
-          expect(contentsOf('blah.txt')).to.be('hello there');
+          expect(testDir.contentsOf('blah.txt')).to.be('hello there');
           done();
         });
       });
-  });
-  
-  it('should integrate with SimpleGitServer', function(done) {
-    var request = require('supertest');
-    var SimpleGitServer = require('../git-server').SimpleGitServer;
-    var app = SimpleGitServer({git: git});
-
-    git.init(function(err) {
-      if (err) return done(err);
-
-      app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
-        email: 'foo@foo.org',
-        origin: 'http://bar.org'
-      });
-    
-      request(app)
-        .post('/commit')
-        .set('X-Access-Token', 'abcd')
-        .send({
-          add: {
-            'foo.txt': 'blarg'
-          }
-        })
-        .expect(200, onAddFooTxt);
-      
-      function onAddFooTxt(err) {
-        if (err) return done(err);
-        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(true);
-        expect(contentsOf('foo.txt')).to.be('blarg');
-        request(app)
-          .get('/static/foo.txt')
-          .send()
-          .expect(200, 'blarg', onGetFooTxt);
-      }
-
-      function onGetFooTxt(err) {
-        if (err) return done(err);
-        request(app)
-          .get('/ls')
-          .send()
-          .expect(200, {files: ['foo.txt']}, onListFiles)
-      }
-      
-      function onListFiles(err) {
-        if (err) return done(err);
-        request(app)
-          .post('/commit')
-          .set('X-Access-Token', 'abcd')
-          .send({remove: ['foo.txt']})
-          .expect(200, onRemoveFooTxt);
-      }
-      
-      function onRemoveFooTxt(err) {
-        if (err) return done(err);
-        expect(fs.existsSync(git.abspath('foo.txt'))).to.be(false);
-        expect(fs.existsSync(git.abspath('.git/info/refs'))).to.be(true);
-        done();
-      }
-    });
   });
 });
