@@ -288,6 +288,82 @@ describe("SimpleGitServer", function() {
       .expect(200, {files: ['bloop/bap.js']}, done);
   });
   
+  it("should fail when pulling w/ no repository", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .post('/pull')
+      .set('X-Access-Token', 'abcd')
+      .send()
+      .expect(400, "repository expected", done);
+  });
+
+  it("should fail when pulling w/ invalid repository", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .post('/pull')
+      .set('X-Access-Token', 'abcd')
+      .send({repository: 'lol'})
+      .expect(400, "invalid repository", done);
+  });
+
+  it("should fail when pulling w/ no refspec", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .post('/pull')
+      .set('X-Access-Token', 'abcd')
+      .send({repository: 'http://blah.org/myrepo'})
+      .expect(400, "refspec expected", done);
+  });
+
+  it("should fail when pulling w/ no token", function(done) {
+    request(cfg(SimpleGitServer({git: {}})))
+      .post('/pull')
+      .send()
+      .expect(403, done);
+  });
+
+  it("should return 500 on pull failure", function(done) {
+    request(cfg(SimpleGitServer({
+      git: {
+        pull: function(options, cb) {
+          cb('fail fail fail!');
+        }
+      }
+    })))
+      .post('/pull')
+      .set('X-Access-Token', 'abcd')
+      .send({
+        repository: 'http://blah.org/myrepo',
+        refspec: 'master'
+      })
+      .expect(500, 'an unknown error occurred', done);
+  });
+
+  it("should pull", function(done) {
+    var pullOptions;
+    request(cfg(SimpleGitServer({
+      git: {
+        pull: function(options, cb) {
+          pullOptions = options;
+          cb(null);
+        }
+      }
+    })))
+      .post('/pull')
+      .set('X-Access-Token', 'abcd')
+      .send({
+        repository: 'http://blah.org/myrepo',
+        refspec: 'master'
+      })
+      .expect(200, function(err) {
+        if (err) return done(err);
+        expect(pullOptions).to.eql({
+          repository: 'http://blah.org/myrepo',
+          refspec: 'master',
+          email: 'foo@foo.org',
+          name: 'foo from http://bar.org'
+        });
+        done();
+      });
+  });
+  
   it("should have /token endpoint", function(done) {
     request(cfg(SimpleGitServer({git: {}})))
       .post('/token')

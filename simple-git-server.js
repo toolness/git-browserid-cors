@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     path = require('path'),
+    url = require('url'),
     express = require('express');
 
 function username(email) {
@@ -82,6 +83,32 @@ function makeListHandler(git) {
   };
 }
 
+function makePullHandler(git) {  
+  return function(req, res) {
+    if (!req.user)
+      return res.send(403);
+    
+    if (!(typeof(req.body.repository) == 'string'))
+      return res.send('repository expected', 400);
+    var repo = url.parse(req.body.repository);
+    if (!(repo.protocol == "git:" || repo.protocol == "http:" ||
+          repo.protocol == "https:"))
+      return res.send('invalid repository', 400);
+    if (!(typeof(req.body.refspec) == 'string'))
+      return res.send('refspec expected', 400);
+    
+    git.pull({
+      repository: req.body.repository,
+      refspec: req.body.refspec,
+      email: req.user.email,
+      name: username(req.user.email) + ' from ' + req.user.origin
+    }, function(err) {
+      if (err) return res.send('an unknown error occurred', 500);
+      return res.send(200);
+    });
+  }
+}
+
 module.exports = function SimpleGitServer(config) {
   var git = config.git;
   var bic = config.browserIDCORS || require('browserid-cors')();
@@ -92,6 +119,7 @@ module.exports = function SimpleGitServer(config) {
   self.handleCommit = makeCommitHandler(git, function postCommit(git) {
     if (git.cmd) git.cmd(['update-server-info']);
   });
+  self.handlePull = makePullHandler(git);
 
   self.use(express.bodyParser());
   self.use(bic.accessToken);
@@ -99,7 +127,8 @@ module.exports = function SimpleGitServer(config) {
   self.post('/token', bic.handleTokenRequest);
   self.post('/commit', self.handleCommit);
   self.get('/ls', self.handleList);
-  
+  self.post('/pull', self.handlePull);
+
   if (git.abspath)
     self.use('/static', express.static(git.abspath()));
 
