@@ -177,15 +177,15 @@ describe("MultiGitServer integration", function() {
   });
 });
 
-describe("SimpleGitServer", function() {
-  function cfg(app) {
-    app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
-      email: 'foo@foo.org',
-      origin: 'http://bar.org'
-    });
-    return app;
-  }
-  
+function cfg(app) {
+  app.browserIDCORS.tokenStorage.setTestingToken('abcd', {
+    email: 'foo@foo.org',
+    origin: 'http://bar.org'
+  });
+  return app;
+}
+
+describe("SimpleGitServer", function() {  
   function mockLoggingGit() {
     return {
       log: [],
@@ -562,5 +562,86 @@ describe("MultiGitServer", function() {
       .get('/....../ls')
       .send()
       .expect(404, 'invalid repository id: ......', done);
+  });
+  
+  it("should resolve POSTs to /commit to repos", function(done) {
+    var app = cfg(MultiGitServer({
+      gitManager: {
+        rootDir: __dirname,
+        get: function(id, forceCreation, cb) {
+          expect(forceCreation).to.be(true);
+          cb(null, "git repo for " + id);
+        }
+      },
+      handlers: {
+        commit: function(req, res) {
+          expect(req.git).to.be("git repo for foo");
+          expect(req.body.remove).to.eql(["a"]);
+          res.send("thanks bro");
+        }
+      }
+    }));
+    
+    request(app)
+      .post("/commit")
+      .set('X-Access-Token', 'abcd')
+      .send({
+        remove: ['foo/a']
+      })
+      .expect(200, 'thanks bro', done);
+  });
+});
+
+describe("namespaceCommitInfo()", function() {
+  var nci = require('../git-server').namespaceCommitInfo;
+
+  function expectErr(fn, text) {
+    try { 
+      fn();
+      throw new Error("exception not thrown!");
+    } catch(e) {
+      expect(e.message).to.be(text);
+    }
+  }
+  
+  it("should allow commits that add files to one repo", function() {
+    expect(nci({add: {'foo/a': 'bop'}})).to.eql({
+      id: 'foo',
+      info: {add: {'a': 'bop'}}
+    });
+  });
+
+  it("should allow commits that remove files from one repo", function() {
+    expect(nci({remove: ['foo/a']})).to.eql({
+      id: 'foo',
+      info: {remove: ['a']}
+    });
+  });
+
+  it("should allow commits that add+remove files from one repo", function() {
+    expect(nci({add: {'foo/b': 'p'}, remove: ['foo/a']})).to.eql({
+      id: 'foo',
+      info: {add: {b: 'p'}, remove: ['a']}
+    });
+  });
+  
+  it("should not allow empty commits", function() {
+    expectErr(function() { nci({}); }, 'cannot make an empty commit');
+  });
+
+  it("should not allow a commit to span multiple repos", function() {
+    expectErr(function() { nci({
+      remove: ['foo/a', 'bar/b']
+    }); }, 'commit cannot span multiple repos: foo, bar');
+  });
+  
+  it("should not allow a commit to contain files w/o repos", function() {
+    expectErr(function() { nci({
+      remove: ['a']
+    }); }, 'commit cannot contain files w/o repos');
+
+    expectErr(function() { nci({
+      remove: ['/a']
+    }); }, 'commit cannot contain files w/o repos');
   });
 });

@@ -8,6 +8,52 @@ function username(email) {
   return email.slice(0, email.indexOf('@'));
 }
 
+function namespaceCommitInfo(origInfo) {
+  var id;
+  var info = {};
+  
+  if (origInfo.message)
+    info.message = origInfo.message;
+
+  function chop(path) {
+    var index = path.indexOf('/');
+    if (index == -1)
+      throw new Error('commit cannot contain files w/o repos');
+    var root = path.slice(0, index);
+    var rel = path.slice(index + 1);
+    if (!root)
+      throw new Error('commit cannot contain files w/o repos');
+    if (!id)
+      id = root;
+    if (root != id)
+      throw new Error("commit cannot span multiple repos: " + id +
+                      ", " + root);
+    return rel;
+  }
+  
+  if (origInfo.add) {
+    info.add = {};
+    Object.keys(origInfo.add).forEach(function(path) {
+      info.add[chop(path)] = origInfo.add[path];
+    });
+  }
+  
+  if (origInfo.remove) {
+    info.remove = [];
+    origInfo.remove.forEach(function(path) {
+      info.remove.push(chop(path));
+    });
+  }
+  
+  if (!id)
+    throw new Error('cannot make an empty commit');
+
+  return {
+    id: id,
+    info: info
+  };
+}
+
 var Handlers = {
   commit: function(req, res) {
     var git = req.git;
@@ -127,6 +173,8 @@ function BaseServer(browserIDCORS) {
   return self;
 }
 
+exports.namespaceCommitInfo = namespaceCommitInfo;
+
 exports.MultiGitServer = function MultiGitServer(config) {
   var gitManager = config.gitManager;
   var handlers = config.handlers || Handlers;
@@ -168,9 +216,18 @@ exports.MultiGitServer = function MultiGitServer(config) {
     
   self.use('/static', express.static(gitManager.rootDir));
   self.post('/:id/commit', validId, createGitFromId, handlers.commit);
+  self.post('/commit', function(req, res, next) {
+    try {
+      var result = namespaceCommitInfo(req.body);
+    } catch (e) {
+      return res.send(e.message, 400);
+    }
+    _.extend(req.body, result.info);
+    req.params['id'] = result.id;
+    next();
+  }, validId, createGitFromId, handlers.commit);
   self.get('/:id/ls', validId, gitFromId, handlers.list);
   self.post('/:id/pull', validId, createGitFromId, handlers.pull);
-  
   return self;
 };
 
