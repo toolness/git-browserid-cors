@@ -1,4 +1,5 @@
 var _ = require('underscore'),
+    fs = require('fs'),
     path = require('path'),
     url = require('url'),
     express = require('express');
@@ -162,6 +163,9 @@ exports.MultiGitServer = function MultiGitServer(config) {
     });
   }
   
+  if (!fs.existsSync(gitManager.rootDir))
+    throw new Error("root dir does not exist: " + gitManager.rootDir);
+    
   self.use('/static', express.static(gitManager.rootDir));
   self.post('/:id/commit', validId, createGitFromId, handlers.commit);
   self.get('/:id/ls', validId, gitFromId, handlers.list);
