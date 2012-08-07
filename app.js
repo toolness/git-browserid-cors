@@ -13,7 +13,7 @@ console.log("root directory is", rootDir);
 if (config.type == "multiple") {
   var MultiGitServer = require('./git-server').MultiGitServer;
   var GitManager = require('./git-manager');
-  var gitManager = GitManager({rootDir: rootDir});
+  var gitManager = GitManager(rootDir);
 
   app = MultiGitServer({gitManager: gitManager});
 } else {

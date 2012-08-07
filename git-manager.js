@@ -8,6 +8,9 @@ module.exports = function GitManager(rootDir) {
       repos = {},
       cs = CommandSerializer();
   
+  if (typeof(rootDir) != 'string')
+    throw new Error('root dir must be string');
+  
   self.get = cs.serialized(function(id, forceCreation, cb) {
     if (id in repos)
       return cb(null, repos[id]);
