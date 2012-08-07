@@ -109,17 +109,28 @@ var handlers = {
   }
 };
 
-module.exports = function SimpleGitServer(config) {
-  var git = config.git;
-  var bic = config.browserIDCORS || require('browserid-cors')();
+function BaseServer(browserIDCORS) {
+  var bic = browserIDCORS || require('browserid-cors')();
   var self = express.createServer();
   
   self.browserIDCORS = bic;
   self.use(express.bodyParser());
   self.use(bic.accessToken);
   self.use(bic.fullCORS);
+  self.use(function(req, res, next) {
+    if (req.path == '/token')
+      return bic.handleTokenRequest(req, res);
+    return next();
+  });
+  
+  return self;
+}
+
+module.exports = function SimpleGitServer(config) {
+  var git = config.git;
+  var self = BaseServer(config.browserIDCORS);
+  
   self.use(function(req, res, next) { req.git = git; next(); });
-  self.post('/token', bic.handleTokenRequest);
   self.post('/commit', handlers.commit);
   self.get('/ls', handlers.list);
   self.post('/pull', handlers.pull);
