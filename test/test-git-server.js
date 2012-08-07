@@ -556,7 +556,7 @@ describe("SimpleGitServer", function() {
 
 describe("MultiGitServer", function() {
   it("should reject illegal repository names", function(done) {
-    var app = MultiGitServer({gitManager: {rootDir: '/meh'}});
+    var app = MultiGitServer({gitManager: {rootDir: __dirname}});
     
     request(app)
       .get('/....../ls')
